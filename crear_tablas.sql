@@ -1,0 +1,11 @@
+USE impactprint_db;
+
+CREATE TABLE cotizaciones (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL,
+  telefono VARCHAR(20) NOT NULL,
+  correo VARCHAR(100) NOT NULL,
+  servicio VARCHAR(100) NOT NULL,
+  mensaje TEXT,
+  fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
