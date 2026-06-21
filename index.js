@@ -28,13 +28,24 @@ const limiterGlobal = rateLimit({
 });
 app.use(limiterGlobal);
 
-// SEGURIDAD — Rate limiting estricto para cotizaciones
-const limiterCotizaciones = rateLimit({
+// SEGURIDAD — Rate limiting estricto para cotizaciones (POST)
+const limiterCotizacionesPost = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
-  message: { error: 'Límite de cotizaciones alcanzado, intenta en una hora.' }
+  message: { error: 'Límite de cotizaciones alcanzado, intenta en una hora.' },
+  skip: (req) => req.method !== 'POST'
 });
-app.use('/api/cotizaciones', limiterCotizaciones);
+
+// SEGURIDAD — Rate limiting para GET de cotizaciones
+const limiterCotizacionesGet = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: 'Demasiadas solicitudes, intenta más tarde.' },
+  skip: (req) => req.method !== 'GET'
+});
+
+app.use('/api/cotizaciones', limiterCotizacionesPost);
+app.use('/api/cotizaciones', limiterCotizacionesGet);
 
 app.use(express.json({ limit: '10kb' }));
 
@@ -42,6 +53,14 @@ app.use('/api', cotizacionRoutes);
 
 app.get('/', (req, res) => {
   res.json({ mensaje: 'Uku Pacha API funcionando correctamente' });
+});
+
+// SEGURIDAD — Middleware de error global
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(err.status || 500).json({ 
+    error: 'Error interno del servidor. Por favor intenta más tarde.' 
+  });
 });
 
 app.listen(PORT, () => {

@@ -54,8 +54,9 @@ const crearCotizacion = (req, res) => {
       return res.status(500).json({ error: 'Error al guardar la cotización' });
     }
 
-    const mensajeWhatsapp = `Hola! Nueva cotización:%0ANombre: ${nombre}%0ATeléfono: ${telefono}%0ACorreo: ${correo}%0AServicio: ${servicio}%0AMensaje: ${mensaje || 'Sin mensaje'}`;
-    const whatsappUrl = `https://wa.me/${process.env.WHATSAPP_NUMBER}?text=${mensajeWhatsapp}`;
+    // SEGURIDAD — URL encoding correcto para WhatsApp
+    const textoWhatsapp = `Hola! Nueva cotización:\nNombre: ${nombre}\nTeléfono: ${telefono}\nCorreo: ${correo}\nServicio: ${servicio}\nMensaje: ${mensaje || 'Sin mensaje'}`;
+    const whatsappUrl = `https://wa.me/${process.env.WHATSAPP_NUMBER}?text=${encodeURIComponent(textoWhatsapp)}`;
 
     res.status(201).json({
       mensaje: 'Cotización guardada correctamente',
@@ -68,6 +69,7 @@ const crearCotizacion = (req, res) => {
 const obtenerCotizaciones = (req, res) => {
   db.query('SELECT * FROM cotizaciones ORDER BY fecha DESC', (err, results) => {
     if (err) {
+      console.error('Error al obtener cotizaciones:', err);
       return res.status(500).json({ error: 'Error al obtener cotizaciones' });
     }
     res.json(results);
