@@ -18,6 +18,8 @@ const corsOptions = {
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 };
+
+console.log("FRONTEND_URL =", process.env.FRONTEND_URL);
 app.use(cors(corsOptions));
 
 // SEGURIDAD — Rate limiting global
