@@ -45,8 +45,12 @@ const crearCotizacion = (req, res) => {
 
   const { nombre, telefono, correo, servicio, mensaje } = req.body;
 
-  const query = `INSERT INTO cotizaciones (nombre, telefono, correo, servicio, mensaje) 
-                 VALUES (?, ?, ?, ?, ?)`;
+const query = `
+INSERT INTO cotizaciones
+(nombre, telefono, correo, servicio, mensaje)
+VALUES ($1,$2,$3,$4,$5)
+RETURNING id
+`;
 
   db.query(query, [nombre, telefono, correo, servicio, mensaje || ''], (err, result) => {
     if (err) {
