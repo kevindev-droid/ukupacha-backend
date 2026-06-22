@@ -1,70 +1,31 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-const cotizacionRoutes = require('./src/routes/cotizacionRoutes');
+const app = require('./src/app');
+const { closePool, healthCheck } = require('./src/config/database');
+const logger = require('./src/utils/logger');
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 
-// SEGURIDAD — Headers HTTP
-app.use(helmet());
+const server = app.listen(PORT, '0.0.0.0', async () => {
+  logger.info(`API escuchando en el puerto ${PORT}`);
 
-// SEGURIDAD — CORS restringido
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://127.0.0.1:5500',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
-};
-
-console.log("FRONTEND_URL =", process.env.FRONTEND_URL);
-app.use(cors(corsOptions));
-
-// SEGURIDAD — Rate limiting global
-const limiterGlobal = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: 'Demasiadas solicitudes, intenta más tarde.' }
-});
-app.use(limiterGlobal);
-
-// SEGURIDAD — Rate limiting estricto para cotizaciones (POST)
-const limiterCotizacionesPost = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: { error: 'Límite de cotizaciones alcanzado, intenta en una hora.' },
-  skip: (req) => req.method !== 'POST'
+  try {
+    await healthCheck();
+    logger.info('Conexion a PostgreSQL verificada');
+  } catch (error) {
+    logger.error('No se pudo verificar PostgreSQL al iniciar', { error: error.message });
+  }
 });
 
-// SEGURIDAD — Rate limiting para GET de cotizaciones
-const limiterCotizacionesGet = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
-  message: { error: 'Demasiadas solicitudes, intenta más tarde.' },
-  skip: (req) => req.method !== 'GET'
-});
+function shutdown(signal) {
+  logger.info(`Recibida senal ${signal}. Cerrando servidor...`);
 
-app.use('/api/cotizaciones', limiterCotizacionesPost);
-app.use('/api/cotizaciones', limiterCotizacionesGet);
-
-app.use(express.json({ limit: '10kb' }));
-
-app.use('/api', cotizacionRoutes);
-
-app.get('/', (req, res) => {
-  res.json({ mensaje: 'Uku Pacha API funcionando correctamente' });
-});
-
-// SEGURIDAD — Middleware de error global
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(err.status || 500).json({ 
-    error: 'Error interno del servidor. Por favor intenta más tarde.' 
+  server.close(async () => {
+    await closePool();
+    logger.info('Servidor cerrado correctamente');
+    process.exit(0);
   });
-});
+}
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
-});
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
